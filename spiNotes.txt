@@ -1,0 +1,68 @@
+This Will Be Our Notes On What We Needed To Understand To Get A Spi Device Working:
+
+Right now I have accomplished using someone elses code to read data from the MCP3008 device.
+What I had a problem with is how the data was transfered.
+I thought that a spi driver would open communication with a spi device starting with the control bits and
+then recieving messages and sending messages as necessary.
+With this in mind I was confused when examples of code did not include the control bit selections for the Spi
+device.
+This is because for each exchange between controller and device sets the control bits. So with each read message
+we need to include some "write" data in our txbuf.
+The write data is as defined on pg 19 of the MCP3008 datasheet. It says that once communication is established the first
+byte will be counted as the starting bit, and the second byte will determine the control bits.
+Look at the data sheet for more information, but for our purposes this means the first byte must be 0, as the starting
+bit and the second byte must be 8 to signify a single-ended communication with channel CH0.
+
+Below is around what the code needs to look like:
+
+First a spi message struct is:
+struct spi_ioc_transfer {
+	__u64		tx_buf;
+	__u64		rx_buf;
+
+	__u32		len;
+	__u32		speed_hz;
+
+	__u16		delay_usecs;
+	__u8		bits_per_word;
+	__u8		cs_change;
+	__u8		tx_nbits;
+	__u8		rx_nbits;
+	__u8		word_delay_usecs;
+	__u8		pad;
+
+	//pulled from /usr/include/linux/spi/spidev.h
+	
+};
+
+to open communication with a spi driver in rasberry pi 4, at least I think this is what it is doing,
+open the file spidev#d.#c
+where #d is the driver, and #c is the device?
+for our purposes it should look something like this
+
+spi_fd = open("/dev/spidev0.0", O_RDWR))
+where spi_fd is used later to message the driver
+0_RDWR is just read and write mode for file
+
+to read from our spi device, which is what ours does as an analog to digital converter we need to send a message
+to the driver with ioctl
+honestly I dont really know what this is doing... first I dont know what Ioctl does, except that it interacts
+with drivers somehow, and i cant tell what SPI_IOC_MESSAGE(N) is doing either, the other stuff makes sense though
+line:
+ioctl(spi_fd, SPI_IOC_MESSAGE(1), &msg);
+^ the n value in spi_ioc_message determines how many message you are sending... we will be sending one
+
+the msg will be a spi_ioc_transfer struct as defined above:
+the things we will need to define in this struct are bits_per_word, len, tx_buf, and rx_buf
+	bits_per_word: the amount of bits perword to be used by the spi device
+		in our case: 8
+	len: the length of the message sent and recieved
+		in our case: 4
+	tx_buf: the message being sent to the spi device
+		in our case: this will be the control bits as talked about above, so the first byte in our _u64 will need to be 0
+			and the second will need to be 8, and I dont think the rest of the bits matter but probably should be set to 0
+	rx_buf: this is the message recieved form the spi device
+		in our case: this needs to be a null but existing buffer
+		
+
+thats it with this you should be able to create a program to interact with a spi device

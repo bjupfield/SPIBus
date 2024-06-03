@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <linux/spi/spidev.h>
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -31,43 +32,55 @@ void closed(struct termios *old)
 //this section implements the spidev functions dev\fined by spidev
 // <3
 
-int open_Spi(spi* spy)
+int open_Spi()
 {
 	
-	spy->tx_buf = (unsigned long)malloc(sizeof(unsigned long));
-	spy->rx_buf = (unsigned long)malloc(sizeof(unsigned long));
-	spy->len = 4;
-	//set to read
-	spy->tx_buf = 64;
-	spy->tx_buf << 2;
-	spy->tx_buf += 19;
-	spy->tx_buf << 4;
 
-	
+	printf("hello");
 	file = open("/dev/spidev/0.0", O_RDWR);
 	
 	return -1;
 }
 
-int close_Spi(spi* spy)
+int close_Spi()
 {
 	
 	close(file);
 	return 0;
 }
 
-int write_Spi(spi* spy)
+int write_Spi()
 {
 	return -1;
 }
 
-unsigned long read_Spi(spi* spy)
+int read_Spi()
 {	
+	spi spy = {0};
+	uint8_t rx[4] = {0};
 	
-	ioctl(file, SPI_IOC_MESSAGE(1), &spy);
-	if(spy->rx_buf != 0)
+	spy.tx_buf = (unsigned long)malloc(sizeof(unsigned long));
+	spy.rx_buf = (unsigned long)rx;
+	spy.len = 3;
+	spy.delay_usecs = 0;
+	spy.speed_hz = 5000;
+	spy.bits_per_word = 8;
+	
+	//set to read
+	spy.tx_buf = 1;
+	spy.tx_buf << 6;
+	
+	ioctl(file, SPI_IOC_MESSAGE(1), spy);
+	
+	for(int i = 0; i < 4; i++)
 	{
-		return spy->rx_buf;
+		printf("%d, ", rx[i]);
+	}
+	printf("\n");
+	
+	if(spy.rx_buf != 0)
+	{
+		return rx[3];
 	}
 	return -1;
 }
@@ -83,7 +96,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	
-	char* dispensery = malloc(sizeof(char) * 50);
+	//char* dispensery = malloc(sizeof(char) * 50);
 	
 	int status = 1;
 	printf("Press Any Key To End\n");
@@ -91,20 +104,19 @@ int main(int argc, char** argv)
 	
 	//spi communicator
 	
-	spi* spy = malloc(sizeof(spi));
-	open_Spi(spy);
+	open_Spi();
 	
 	//look at how spy works, on favorites tab on fire fox
 	//basically send open(location, message, spi struct);
 	//^ basic syntax i think
 	
 	
-	static struct termios oldt, newt;
-	start(&oldt, &newt);
+	//static struct termios oldt, newt;
+	//start(&oldt, &newt);
 	while(status == 1)
 	{
 		
-		printf("Char is: %lu", read_Spi(spy));
+		printf("Char is: %d\n", read_Spi());
 		
 		if(kbhit())
 		{
@@ -114,10 +126,10 @@ int main(int argc, char** argv)
 		}
 		
 		
-		usleep(10);
+		usleep(100000);
 		
 	}
-	closed(&oldt);
+	//closed(&oldt);
 	
 	printf("\nKey Was Entered\n");
 	
