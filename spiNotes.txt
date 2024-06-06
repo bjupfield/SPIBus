@@ -11,7 +11,7 @@ we need to include some "write" data in our txbuf.
 The write data is as defined on pg 19 of the MCP3008 datasheet. It says that once communication is established the first
 byte will be counted as the starting bit, and the second byte will determine the control bits.
 Look at the data sheet for more information, but for our purposes this means the first byte must be 1, as the starting
-bit and the second byte must be 8 to signify a single-ended communication with channel CH0.
+bit and the second byte must be x << 4 to signify + 128 a single-ended communication with channel CHx.
 
 Below is around what the code needs to look like:
 
@@ -60,7 +60,7 @@ the things we will need to define in this struct are bits_per_word, len, tx_buf,
 		in our case: 4
 	tx_buf: the message being sent to the spi device
 		in our case: this will be the control bits as talked about above, so the first byte in our _u64 will need to be 1
-			and the second will need to be 8, and I dont think the rest of the bits matter but probably should be set to 0
+			and the second will need to be x << 4, and I dont think the rest of the bits matter but probably should be set to 0
 	rx_buf: this is the message recieved form the spi device
 		in our case: this needs to be a null but existing buffer
 	delay_usecs: the amount of seconds to delay between message
@@ -68,6 +68,21 @@ the things we will need to define in this struct are bits_per_word, len, tx_buf,
 	speed_hz: the speed of the transaction
 		in our case: 4000
 		
-		
+/**************
+
+okay we were having problems with what to write in the tx_buf, ive updated the directions
+above but wanted to put a more extensive explanation of what is going on. I was able to
+understand what was required by looking at the document once again.
+1 is the first byte because the first 8 bits recieved by the device need to be 7 0s than
+the start bit, which is one.
+x << 4 + 128 is the next byte because the next 4 select the diff type and channel select.
+the first bit, which we are hard setting to 1 with 128 is the bit that determines if it is differential or single channel based
+I dont exactly know what they are doing but it seems to be a comparison between two channels if set to zero and just
+a single channels information if set to 1, so we set it to 1 with 128
+the next 3 bits control which channel is selected, which is why we do x << 4, this is pretty simple and understandable
+so I guess for future reference look at the diagram, they explain things much
+better than the 
+
+**************/
 
 thats it with this you should be able to create a program to interact with a spi device

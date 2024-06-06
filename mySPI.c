@@ -26,18 +26,15 @@ int readSpiMCP3008(int channel)
 	
 	spi mySPI = {0};
 	
-	uint8_t txb[4];
+	uint8_t txb[3];
 	txb[0] = 1;
-	txb[1] = 8 + channel;
+	txb[1] = (channel << 4) + 128;
 	txb[2] = 0;
-	txb[3] = 0;
-	//ill be honest, I dont really know what this does
-	//I read the documentation for the MCP3008 and it seems to either be saying that the first byte needs
-	//to be 0-15 to indicate what channels you want to target, or that the first byte needs to be 1 and
-	//the second byte needs to be 0-15...
-	//neither seem to work... but this gets me my number
 	
-	uint8_t rxb[4] = {0};
+	//finally got the channel select working and actually understand what the txb is doing
+	//refer to notes for more information
+	
+	uint8_t rxb[3] = {0};
 	
 	mySPI.tx_buf = (unsigned long)txb;
 	mySPI.rx_buf = (unsigned long)rxb;
